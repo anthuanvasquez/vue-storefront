@@ -1,12 +1,17 @@
-import { getMutationData } from '@vue-storefront/store'
 import * as types from './mutation-types'
-import { cacheStorage } from '../'
+import { Logger } from '@vue-storefront/core/lib/logger'
+import { StorageManager } from '@vue-storefront/core/lib/storage-manager'
 
-export function plugin (mutation, state) {
-  let { storeName, actionName } = getMutationData(mutation.type)
-  if (storeName === types.SN_COMPARE) { // check if this mutation is comapre related
+const watchedMutations = [types.COMPARE_ADD_ITEM, types.COMPARE_DEL_ITEM, types.COMPARE_LOAD_COMPARE].map(m => `compare/${m}`)
+
+const cachePersistPlugin = (mutation, state) => {
+  const cacheStorage = StorageManager.get('compare')
+
+  if (watchedMutations.includes(mutation.type)) {
     cacheStorage.setItem('current-compare', state.compare.items).catch((reason) => {
-      console.error(reason) // it doesn't work on SSR
+      Logger.error(reason, 'compare')
     })
   }
 }
+
+export default cachePersistPlugin

@@ -1,31 +1,58 @@
 module.exports = {
   base: '/',
-  head: [['link', { rel: 'icon', href: '/favicon.png' }]],
+  port: 8081,
+  markdown: {
+    toc: {
+      includeLevel: [2]
+    }
+  },
+  head: [
+    ['link', { rel: 'icon', href: '/favicon.png' }],
+    ['script', { src: 'https://cdnjs.cloudflare.com/ajax/libs/diff2html/2.12.1/diff2html.min.js'}]
+  ],
   themeConfig: {
     repo: 'DivanteLtd/vue-storefront',
     docsDir: 'docs',
     editLinks: true,
+    sidebarDepth: 3,
     nav: [
       {
         text: 'YouTube',
         link: 'https://www.youtube.com/channel/UCkm1F3Cglty3CE1QwKQUhhg',
       },
       {
-        text: 'Medium',
-        link: 'https://medium.com/the-vue-storefront-journal',
+        text: 'Blog',
+        link: 'https://blog.vuestorefront.io/',
       },
     ],
     sidebar: {
       '/guide/': [
-        '',
+      	{
+          title : 'General Information',
+          collapsable: false,
+          children: [
+            'general/introduction'
+          ]
+	      },
         'upgrade-notes/',
+        'security/',
+        {
+          title: 'Cookbook',
+          collapsable: false,
+          children: [
+            'cookbook/data-import',
+            'cookbook/elastic',
+            'cookbook/setup',
+            'cookbook/module',
+            'cookbook/theme',
+            'cookbook/checklist'
+          ],
+        },
         {
           title: 'Installation',
           collapsable: false,
           children: [
-            'installation/linux-mac',
-            'installation/windows',
-            'installation/magento',
+            'installation/theme',
             'installation/production-setup',
           ],
         },
@@ -33,16 +60,16 @@ module.exports = {
           title: 'Basics',
           collapsable: false,
           children: [
+            'basics/release-cycle',
             'basics/project-structure',
             'basics/configuration',
             'basics/contributing',
             'basics/feature-list',
             'basics/recipes',
-            'basics/typescript',
-            'basics/graphql',
             'basics/ssr-cache',
-            'basics/amp',
+            'basics/static-generator',
             'basics/e2e',
+            'basics/url'
           ],
         },
         {
@@ -61,55 +88,16 @@ module.exports = {
           ],
         },
         {
-          title: 'Components',
-          collapsable: false,
-          children: [
-            'components/home-page',
-            'components/category-page',
-            'components/product',
-            'components/modal',
-          ],
-        },
-        {
           title: 'Data in Vue Storefront',
           collapsable: false,
           children: [
             'data/data',
             'data/elasticsearch',
-            'data/data-migrations',
             'data/elastic-queries',
             'data/database-tool',
-            'data/entity-types',
+            'data/static-data',
+            'data/data-loader'
           ],
-        },
-        {
-          title: 'Extensions',
-          collapsable: false,
-          children: [
-            'extensions/introduction',
-            'extensions/extending-api',
-            'extensions/extending-server-side-routes',
-          ],
-        },
-        {
-          title: 'Working with Vuex',
-          collapsable: false,
-          children: [
-            'vuex/introduction',
-            'vuex/product-store',
-            'vuex/category-store',
-            'vuex/cart-store',
-            'vuex/checkout-store',
-            'vuex/order-store',
-            'vuex/stock-store',
-            'vuex/user-store',
-            'vuex/attribute-store',
-          ],
-        },
-        {
-          title: 'Modules',
-          collapsable: false,
-          children: ['modules/introduction', 'modules/cart'],
         },
         {
           title: 'Integrations',
@@ -123,6 +111,31 @@ module.exports = {
             'integrations/tier-prices-sync',
             'integrations/totals-sync',
             'integrations/multistore',
+          ],
+        },
+        {
+          title: 'Data Resolvers',
+          collapsable: false,
+          children: [
+            'data-resolvers/introduction',
+            'data-resolvers/category-service',
+            'data-resolvers/user-service',
+          ]
+        },
+        {
+          title: 'Archives',
+          collapsable: true,
+          children: [
+            'archives/modules',
+            'archives/extensions',
+            'archives/components',
+            'archives/vuex',
+            'archives/cookbook',
+            'archives/graphql',
+            'archives/amp',
+            'archives/typescript',
+            'archives/migration',
+            'archives/entity_type'
           ],
         },
       ],

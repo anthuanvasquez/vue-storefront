@@ -1,7 +1,8 @@
 import { Module } from 'vuex'
 import actions from './actions'
 import mutations from './mutations'
-import RootState from '@vue-storefront/store/types/RootState'
+import getters from './getters'
+import RootState from '@vue-storefront/core/types/RootState'
 import TaxState from '../../types/TaxState'
 
 export const taxModule: Module<TaxState, RootState> = {
@@ -10,5 +11,6 @@ export const taxModule: Module<TaxState, RootState> = {
     rules: []
   },
   actions,
-  mutations
+  mutations,
+  getters
 }

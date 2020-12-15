@@ -3,7 +3,7 @@ import { Wishlist } from '@vue-storefront/core/modules/wishlist/components/Wishl
 export default {
   name: 'Wishlist',
   props: {
-    // depreciated
+    // deprecated
     product: {
       type: Object,
       required: false,
@@ -13,7 +13,7 @@ export default {
   methods: {
     // theme-specific
     onEscapePress () {
-      this.closeWishlist()
+      this.$store.dispatch('ui/closeWishlist')
     }
   },
   mixins: [ Wishlist, onEscapePress ]

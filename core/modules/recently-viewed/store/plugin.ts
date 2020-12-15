@@ -1,12 +1,13 @@
-import { getMutationData } from '@vue-storefront/store'
 import * as types from './mutation-types'
 import { cacheStorage } from '../'
+import { Logger } from '@vue-storefront/core/lib/logger'
 
 export function plugin (mutation, state) {
-  let { storeName, actionName } = getMutationData(mutation.type)
-  if (storeName === types.SN_RECENTLY_VIEWED) { // check if this mutation is recently-viewed related
-    cacheStorage.setItem(storeName, state[storeName].items).catch((reason) => {
-      console.error(reason) // it doesn't work on SSR
+  const type = mutation.type
+
+  if (type.startsWith(types.SN_RECENTLY_VIEWED)) { // check if this mutation is recently-viewed related
+    cacheStorage.setItem('recently-viewed', state['recently-viewed'].items).catch((reason) => {
+      Logger.error(reason)() // it doesn't work on SSR
     })
   }
 }

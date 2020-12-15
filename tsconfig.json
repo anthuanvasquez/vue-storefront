@@ -4,22 +4,25 @@
     "module": "esnext",
     "strict": false,
     "allowJs": true,
-    "importHelpers": true,
+    "importHelpers": false,
     "moduleResolution": "node",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "resolveJsonModule": false,
     "sourceMap": true,
+    "downlevelIteration": true,
     "baseUrl": ".",
     "types": [
       "reflect-metadata",
-      "node"
+      "node",
+      "jest"
     ],
     "paths": {
       "core/*": ["core/*"],
       "theme/*": ["src/themes/default/*"], //needs testing with non-default theme!
       "core/modules/*": ["./core/modules/*"],
+      "@vue-storefront/*": ["./"]
     },
     "lib": ["es2017", "dom"]
   },
@@ -29,10 +32,12 @@
     "src/**/*.vue",
     "core/**/*.ts",
     "core/**/*.vue",
-    "tests/**/*.ts",
-    "module/**/*.ts"
+    "test/**/*.ts",
+    "module/**/*.ts",
+    "packages/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/*.spec.ts"
   ]
 }

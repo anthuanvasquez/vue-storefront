@@ -2,12 +2,13 @@ import { Module } from 'vuex'
 import actions from './actions'
 import getters from './getters'
 import mutations from './mutations'
-import RootState from '@vue-storefront/store/types/RootState'
+import RootState from '@vue-storefront/core/types/RootState'
 import ProductState from '../../types/ProductState'
 
 export const productModule: Module<ProductState, RootState> = {
   namespaced: true,
   state: {
+    // TODO use breadcrumbs from category-next, leave here for backward compatibility
     breadcrumbs: {
       routes: [],
       name: ''
@@ -19,7 +20,12 @@ export const productModule: Module<ProductState, RootState> = {
     },
     current_configuration: {},
     parent: null,
-    list: [],
+    list: {
+      start: 0,
+      perPage: 50,
+      total: 0,
+      items: []
+    },
     original: null, // default, not configured product
     related: {},
     offlineImage: null,
@@ -33,4 +39,8 @@ export const productModule: Module<ProductState, RootState> = {
   getters,
   actions,
   mutations
+}
+
+export const nonReactiveState = {
+  list: []
 }

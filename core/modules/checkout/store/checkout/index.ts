@@ -2,13 +2,16 @@ import { Module } from 'vuex'
 import actions from './actions'
 import getters from './getters'
 import mutations from './mutations'
-import RootState from '@vue-storefront/store/types/RootState'
+import RootState from '@vue-storefront/core/types/RootState'
 import CheckoutState from '../../types/CheckoutState'
+import config from 'config'
 
 export const checkoutModule: Module<CheckoutState, RootState> = {
   namespaced: true,
   state: {
     order: {},
+    paymentMethods: [],
+    shippingMethods: config.shipping.methods,
     personalDetails: {
       firstName: '',
       lastName: '',
@@ -45,7 +48,8 @@ export const checkoutModule: Module<CheckoutState, RootState> = {
       paymentMethod: '',
       paymentMethodAdditional: {}
     },
-    isThankYouPage: false
+    isThankYouPage: false,
+    modifiedAt: 0
   },
   getters,
   actions,

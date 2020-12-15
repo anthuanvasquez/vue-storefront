@@ -1,7 +1,12 @@
+import { WishlistModule } from '../'
+import wishlistMountedMixin from '@vue-storefront/core/modules/wishlist/mixins/wishlistMountedMixin'
+import { registerModule } from '@vue-storefront/core/lib/modules';
+
 export const Wishlist = {
   name: 'Wishlist',
+  mixins: [wishlistMountedMixin],
   created () {
-    this.$store.dispatch('wishlist/load')
+    registerModule(WishlistModule)
   },
   computed: {
     isWishlistOpen () {
@@ -13,7 +18,7 @@ export const Wishlist = {
   },
   methods: {
     closeWishlist () {
-      this.$store.commit('ui/setWishlist', false)
+      this.$store.dispatch('ui/toggleWishlist')
     }
   }
 }

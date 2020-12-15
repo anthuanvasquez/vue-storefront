@@ -1,13 +1,6 @@
-import { module } from './store'
-import { VueStorefrontModule, VueStorefrontModuleConfig } from '@vue-storefront/core/lib/module'
+import { breadcrumbsStore } from './store'
+import { StorefrontModule } from '@vue-storefront/core/lib/modules'
 
-export const KEY = 'breadcrumbs'
-
-const moduleConfig: VueStorefrontModuleConfig = {
-  key: KEY,
-  store: { modules: [
-    { key: KEY, module: module }
-  ] },
+export const BreadcrumbsModule: StorefrontModule = function ({ store }) {
+  store.registerModule('breadcrumbs', breadcrumbsStore)
 }
-
-export const Breadcrumbs = new VueStorefrontModule(moduleConfig)

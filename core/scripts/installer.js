@@ -12,6 +12,7 @@ const isWindows = require('is-windows')
 const isEmptyDir = require('empty-dir')
 const commandExists = require('command-exists')
 const program = require('commander')
+const { createThemeTasks, createThemePrompt } = require('./../../packages/cli/themeTasks')
 
 const SAMPLE_DATA_PATH = 'var/magento2-sample-data'
 const TARGET_FRONTEND_CONFIG_FILE = 'config/local.json'
@@ -20,7 +21,6 @@ const SOURCE_FRONTEND_CONFIG_FILE = 'config/default.json'
 const TARGET_BACKEND_CONFIG_FILE = 'config/local.json'
 const SOURCE_BACKEND_CONFIG_FILE = 'config/default.json'
 
-const STOREFRONT_GIT_URL = 'https://github.com/DivanteLtd/vue-storefront'
 const STOREFRONT_BACKEND_GIT_URL = 'https://github.com/DivanteLtd/vue-storefront-api'
 const MAGENTO_SAMPLE_DATA_GIT_URL = 'https://github.com/magento/magento2-sample-data.git'
 const STOREFRONT_REMOTE_BACKEND_URL = 'https://demo.vuestorefront.io'
@@ -31,6 +31,20 @@ const LOG_DIR = `${STOREFRONT_DIRECTORY}/var/log`
 const INSTALL_LOG_FILE = `${STOREFRONT_DIRECTORY}/var/log/install.log`
 const VUE_STOREFRONT_LOG_FILE = `${STOREFRONT_DIRECTORY}/var/log/vue-storefront.log`
 const VUE_STOREFRONT_BACKEND_LOG_FILE = `${STOREFRONT_DIRECTORY}/var/log/vue-storefront-api.log`
+
+/**
+ * Abstract class for field initialization
+ */
+class Abstract {
+  /**
+   * Constructor
+   *
+   * Initialize fields
+   */
+  constructor (answers) {
+    this.answers = answers
+  }
+}
 
 /**
  * Message management
@@ -46,7 +60,7 @@ class Message {
 
     message([
       ...text
-    ], {color: 'blue', border: false, marginTop: 1})
+    ], { color: 'blue', border: false, marginTop: 1 })
   }
 
   /**
@@ -75,7 +89,7 @@ class Message {
       ...text,
       '',
       logDetailsInfo
-    ], {borderColor: 'red', marginBottom: 1})
+    ], { borderColor: 'red', marginBottom: 1 })
 
     shell.exit(1)
   }
@@ -91,7 +105,7 @@ class Message {
     message([
       'WARNING:',
       ...text
-    ], {color: 'yellow', border: false, marginTop: 1})
+    ], { color: 'yellow', border: false, marginTop: 1 })
   }
 
   /**
@@ -105,21 +119,7 @@ class Message {
 
     message([
       ...text
-    ], Object.assign(isLastMessage ? {marginTop: 1} : {}, {borderColor: 'green', marginBottom: 1}))
-  }
-}
-
-/**
- * Abstract class for field initialization
- */
-class Abstract {
-  /**
-   * Constructor
-   *
-   * Initialize fields
-   */
-  constructor (answers) {
-    this.answers = answers
+    ], Object.assign(isLastMessage ? { marginTop: 1 } : {}, { borderColor: 'green', marginBottom: 1 }))
   }
 }
 
@@ -169,16 +169,16 @@ class Backend extends Abstract {
   }
 
   /**
-   * Run 'npm install' in backend directory
+   * Run 'yarn install' in backend directory
    *
    * @returns {Promise}
    */
-  npmInstall () {
+  depInstall () {
     return new Promise((resolve, reject) => {
-      Message.info('Installing backend npm...')
+      Message.info('Installing backend dep...')
 
-      if (shell.exec(`npm i >> ${Abstract.infoLogStream} 2>&1`).code !== 0) {
-        reject(new Error('Can\'t install backend npm.'))
+      if (shell.exec(`yarn >> ${Abstract.infoLogStream} 2>&1`).code !== 0) {
+        reject(new Error('Can\'t install backend dep.'))
       }
 
       resolve()
@@ -192,10 +192,10 @@ class Backend extends Abstract {
    */
   dockerComposeUp () {
     return new Promise((resolve, reject) => {
-      Message.info('Starting docker in background...')
+      Message.info('Starting Docker in background...')
 
       if (shell.exec(`docker-compose up -d > /dev/null 2>&1`).code !== 0) {
-        reject(new Error('Can\'t start docker in background.'))
+        reject(new Error('Can\'t start Docker in background.'))
       }
       // Adding 20sec timer for ES to get up and running
       // before starting restoration and migration processes
@@ -204,7 +204,7 @@ class Backend extends Abstract {
   }
 
   /**
-   * Validate magento integration settings.
+   * Validate Magento integration settings.
    *
    * @returns {Promise}
    */
@@ -212,16 +212,16 @@ class Backend extends Abstract {
     return new Promise((resolve, reject) => {
       const Magento2Client = require('magento2-rest-client').Magento2Client
 
-      Message.info(`Validating magento integration configuration...`)
+      Message.info(`Validating Magento integration configuration...`)
 
       let m2Url = urlParser(this.answers.m2_url).href
       let apiUrl = urlParser(this.answers.m2_api_url).href
 
       if (!m2Url.length) {
-        reject(new Error('Invalid magento url supplied.'))
+        reject(new Error('Invalid Magento URL supplied.'))
       }
       if (!apiUrl.length) {
-        reject(new Error('Invalid magento rest api url supplied.'))
+        reject(new Error('Invalid Magento rest API URL supplied.'))
       }
 
       let options = {
@@ -237,7 +237,7 @@ class Backend extends Abstract {
         .then((categories) => {
           resolve()
         }).catch((e) => {
-          reject(new Error('Invalid magento integration settings. Original error: ' + e))
+          reject(new Error('Invalid Magento integration settings. Original error: ' + e))
         })
     })
   }
@@ -264,14 +264,14 @@ class Backend extends Abstract {
         config.imageable.whitelist.allowedHosts.push(host)
 
         config.magento2.url = urlParser(this.answers.m2_url).href
-        config.magento2.imgUrl = this.answers.m2_url ? urlParser(this.answers.m2_url).href + '/pub/media/catalog/product' : config.magento2.api.imgUrl
+        config.magento2.imgUrl = this.answers.m2_url ? urlParser(this.answers.m2_url).href + '/pub/media/catalog/product' : config.magento2.imgUrl
         config.magento2.api.url = urlParser(this.answers.m2_api_url).href || config.magento2.api.url
         config.magento2.api.consumerKey = this.answers.m2_api_consumer_key || config.magento2.api.consumerKey
         config.magento2.api.consumerSecret = this.answers.m2_api_consumer_secret || config.magento2.api.consumerSecret
         config.magento2.api.accessToken = this.answers.m2_api_access_token || config.magento2.api.accessToken
         config.magento2.api.accessTokenSecret = this.answers.m2_api_access_token_secret || config.magento2.api.accessTokenSecret
 
-        jsonFile.writeFileSync(TARGET_BACKEND_CONFIG_FILE, config, {spaces: 2})
+        jsonFile.writeFileSync(TARGET_BACKEND_CONFIG_FILE, config, { spaces: 2 })
       } catch (e) {
         reject(new Error('Can\'t create backend config. Original error: ' + e))
       }
@@ -281,7 +281,7 @@ class Backend extends Abstract {
   }
 
   /**
-   * Run 'npm run restore'
+   * Run 'yarn restore'
    *
    * @returns {Promise}
    */
@@ -289,7 +289,7 @@ class Backend extends Abstract {
     return new Promise((resolve, reject) => {
       Message.info('Restoring data for ElasticSearch...')
 
-      if (shell.exec(`npm run restore >> ${Abstract.infoLogStream} 2>&1`).code !== 0) {
+      if (shell.exec(`yarn restore >> ${Abstract.infoLogStream} 2>&1`).code !== 0) {
         reject(new Error('Can\'t restore data for ElasticSearch.'))
       }
 
@@ -298,7 +298,7 @@ class Backend extends Abstract {
   }
 
   /**
-   * Run 'npm run migrate'
+   * Run 'yarn migrate'
    *
    * @returns {Promise}
    */
@@ -306,7 +306,7 @@ class Backend extends Abstract {
     return new Promise((resolve, reject) => {
       Message.info('Migrating data into ElasticSearch...')
 
-      if (shell.exec(`npm run migrate >> ${Abstract.infoLogStream} 2>&1`).code !== 0) {
+      if (shell.exec(`yarn migrate >> ${Abstract.infoLogStream} 2>&1`).code !== 0) {
         reject(new Error('Can\'t migrate data into ElasticSearch.'))
       }
 
@@ -321,7 +321,7 @@ class Backend extends Abstract {
    */
   importElasticSearch () {
     return new Promise((resolve, reject) => {
-      Message.info('Importing data from magento into ElasticSearch...')
+      Message.info('Importing data from Magento into ElasticSearch...')
 
       if (shell.exec(`yarn mage2vs import >> ${Abstract.infoLogStream} 2>&1`).code !== 0) {
         reject(new Error('Can\'t import data into ElasticSearch.'))
@@ -332,7 +332,7 @@ class Backend extends Abstract {
   }
 
   /**
-   * Cloning magento sample data
+   * Cloning Magento sample data
    *
    * @returns {Promise}
    */
@@ -349,7 +349,7 @@ class Backend extends Abstract {
   }
 
   /**
-   * Start 'npm run dev' in background
+   * Start 'yarn dev' in background
    *
    * @returns {Promise}
    */
@@ -357,8 +357,14 @@ class Backend extends Abstract {
     return new Promise((resolve, reject) => {
       Message.info('Starting backend server...')
 
-      if (shell.exec(`nohup npm run dev > ${Abstract.backendLogStream} 2>&1 &`).code !== 0) {
-        reject(new Error('Can\'t start dev server.', VUE_STOREFRONT_BACKEND_LOG_FILE))
+      if (isWindows()) {
+        if (shell.exec(`start /min yarn dev > ${Abstract.backendLogStream} 2>&1 &`).code !== 0) {
+          reject(new Error('Can\'t start dev server.', VUE_STOREFRONT_BACKEND_LOG_FILE))
+        }
+      } else {
+        if (shell.exec(`nohup yarn dev > ${Abstract.backendLogStream} 2>&1 &`).code !== 0) {
+          reject(new Error('Can\'t start dev server.', VUE_STOREFRONT_BACKEND_LOG_FILE))
+        }
       }
 
       resolve()
@@ -417,14 +423,17 @@ class Storefront extends Abstract {
           graphQlHost = backendPath.replace('https://', '').replace('http://', '')
         }
 
+        config.api.url = backendPath
         config.graphql.host = graphQlHost
         config.graphql.port = graphQlPort
         config.elasticsearch.host = `${backendPath}/api/catalog`
         config.orders.endpoint = `${backendPath}/api/order`
         config.products.endpoint = `${backendPath}/api/product`
+        config.users.loginAfterCreatePassword = true
         config.users.endpoint = `${backendPath}/api/user`
-        config.users.history_endpoint = `${backendPath}/api/user/order-history?token={{token}}`
+        config.users.history_endpoint = `${backendPath}/api/user/order-history?token={{token}}&pageSize={{pageSize}}&currentPage={{currentPage}}`
         config.users.resetPassword_endpoint = `${backendPath}/api/user/reset-password`
+        config.users.createPassword_endpoint = `${backendPath}/api/user/create-password`
         config.users.changePassword_endpoint = `${backendPath}/api/user/change-password?token={{token}}`
         config.users.login_endpoint = `${backendPath}/api/user/login`
         config.users.create_endpoint = `${backendPath}/api/user/create`
@@ -444,19 +453,68 @@ class Storefront extends Abstract {
         config.cart.applycoupon_endpoint = `${backendPath}/api/cart/apply-coupon?token={{token}}&cartId={{cartId}}&coupon={{coupon}}`
         config.reviews.create_endpoint = `${backendPath}/api/review/create?token={{token}}`
 
-        config.mailchimp.endpoint = `${backendPath}/api/ext/mailchimp-subscribe/subscribe`
+        config.newsletter.endpoint = `${backendPath}/api/ext/mailchimp-subscribe/subscribe`
         config.mailer.endpoint.send = `${backendPath}/api/ext/mail-service/send-email`
         config.mailer.endpoint.token = `${backendPath}/api/ext/mail-service/get-token`
         config.images.baseUrl = this.answers.images_endpoint
         config.cms.endpoint = `${backendPath}/api/ext/cms-data/cms{{type}}/{{cmsId}}`
         config.cms.endpointIdentifier = `${backendPath}/api/ext/cms-data/cms{{type}}Identifier/{{cmsIdentifier}}/storeId/{{storeId}}`
 
+        if (this.answers.ssr_endpoints) {
+          if (Abstract.wasLocalBackendInstalled) {
+            graphQlHost = 'localhost'
+            backendPath = 'http://localhost:8080'
+          } else {
+            backendPath = STOREFRONT_REMOTE_BACKEND_URL
+            graphQlHost = backendPath.replace('https://', '').replace('http://', '')
+          }
+
+          // Do we really need protocol_ssr in a different place than GraphQL?
+          config.server.protocol_ssr = 'http'
+          config.api.url_ssr = backendPath
+          config.graphql.host_ssr = graphQlHost
+          config.graphql.port_ssr = graphQlPort
+          config.elasticsearch.host_ssr = `${backendPath}/api/catalog`
+          config.orders.endpoint_ssr = `${backendPath}/api/order`
+          config.products.endpoint_ssr = `${backendPath}/api/product`
+          config.users.endpoint_ssr = `${backendPath}/api/user`
+          config.users.history_endpoint_ssr = `${backendPath}/api/user/order-history?token={{token}}`
+          config.users.resetPassword_endpoint_ssr = `${backendPath}/api/user/reset-password`
+          config.users.changePassword_endpoint_ssr = `${backendPath}/api/user/change-password?token={{token}}`
+          config.users.login_endpoint_ssr = `${backendPath}/api/user/login`
+          config.users.create_endpoint_ssr = `${backendPath}/api/user/create`
+          config.users.me_endpoint_ssr = `${backendPath}/api/user/me?token={{token}}`
+          config.users.refresh_endpoint_ssr = `${backendPath}/api/user/refresh`
+          config.stock.endpoint_ssr = `${backendPath}/api/stock`
+          config.cart.create_endpoint_ssr = `${backendPath}/api/cart/create?token={{token}}`
+          config.cart.updateitem_endpoint_ssr = `${backendPath}/api/cart/update?token={{token}}&cartId={{cartId}}`
+          config.cart.deleteitem_endpoint_ssr = `${backendPath}/api/cart/delete?token={{token}}&cartId={{cartId}}`
+          config.cart.pull_endpoint_ssr = `${backendPath}/api/cart/pull?token={{token}}&cartId={{cartId}}`
+          config.cart.totals_endpoint_ssr = `${backendPath}/api/cart/totals?token={{token}}&cartId={{cartId}}`
+          config.cart.paymentmethods_endpoint_ssr = `${backendPath}/api/cart/payment-methods?token={{token}}&cartId={{cartId}}`
+          config.cart.shippingmethods_endpoint_ssr = `${backendPath}/api/cart/shipping-methods?token={{token}}&cartId={{cartId}}`
+          config.cart.shippinginfo_endpoint_ssr = `${backendPath}/api/cart/shipping-information?token={{token}}&cartId={{cartId}}`
+          config.cart.collecttotals_endpoint_ssr = `${backendPath}/api/cart/collect-totals?token={{token}}&cartId={{cartId}}`
+          config.cart.deletecoupon_endpoint_ssr = `${backendPath}/api/cart/delete-coupon?token={{token}}&cartId={{cartId}}`
+          config.cart.applycoupon_endpoint_ssr = `${backendPath}/api/cart/apply-coupon?token={{token}}&cartId={{cartId}}&coupon={{coupon}}`
+          config.reviews.create_endpoint_ssr = `${backendPath}/api/review/create?token={{token}}`
+
+          // Probably pointless (only CS)
+          // config.newsletter.endpoint_ssr = `${backendPath}/api/ext/mailchimp-subscribe/subscribe`
+          config.mailer.endpoint.send_ssr = `${backendPath}/api/ext/mail-service/send-email`
+          config.mailer.endpoint.token_ssr = `${backendPath}/api/ext/mail-service/get-token`
+          // Probably pointless (only CS)
+          // config.images.baseUrl_ssr = this.answers.images_endpoint
+          config.cms.endpoint_ssr = `${backendPath}/api/ext/cms-data/cms{{type}}/{{cmsId}}`
+          config.cms.endpointIdentifier_ssr = `${backendPath}/api/ext/cms-data/cms{{type}}Identifier/{{cmsIdentifier}}/storeId/{{storeId}}`
+        }
+
         config.install = {
           is_local_backend: Abstract.wasLocalBackendInstalled,
           backend_dir: this.answers.backend_dir || false
         }
 
-        jsonFile.writeFileSync(TARGET_FRONTEND_CONFIG_FILE, config, {spaces: 2})
+        jsonFile.writeFileSync(TARGET_FRONTEND_CONFIG_FILE, config, { spaces: 2 })
       } catch (e) {
         reject(new Error('Can\'t create storefront config.'))
       }
@@ -466,16 +524,16 @@ class Storefront extends Abstract {
   }
 
   /**
-   * Run 'npm run build' on storefront
+   * Run 'yarn build' on storefront
    *
    * @returns {Promise}
    */
-  npmBuild () {
+  depBuild () {
     return new Promise((resolve, reject) => {
-      Message.info('Build storefront npm...')
+      Message.info('Build storefront dep...')
 
-      if (shell.exec(`npm run build > ${Abstract.storefrontLogStream} 2>&1`).code !== 0) {
-        reject(new Error('Can\'t build storefront npm.', VUE_STOREFRONT_LOG_FILE))
+      if (shell.exec(`yarn build > ${Abstract.storefrontLogStream} 2>&1`).code !== 0) {
+        reject(new Error('Can\'t build storefront dep.', VUE_STOREFRONT_LOG_FILE))
       }
 
       resolve()
@@ -483,7 +541,7 @@ class Storefront extends Abstract {
   }
 
   /**
-   * Start 'npm run dev' in background
+   * Start 'yarn dev' in background
    *
    * @returns {Promise}
    */
@@ -491,12 +549,45 @@ class Storefront extends Abstract {
     return new Promise((resolve, reject) => {
       Message.info('Starting storefront server...')
 
-      if (shell.exec(`nohup npm run dev >> ${Abstract.storefrontLogStream} 2>&1 &`).code !== 0) {
-        reject(new Error('Can\'t start storefront server.', VUE_STOREFRONT_LOG_FILE))
+      if (isWindows()) {
+        if (shell.exec(`start /min yarn dev >> ${Abstract.storefrontLogStream} 2>&1 &`).code !== 0) {
+          reject(new Error('Can\'t start storefront server.', VUE_STOREFRONT_LOG_FILE))
+        }
+      } else {
+        if (shell.exec(`nohup yarn dev >> ${Abstract.storefrontLogStream} 2>&1 &`).code !== 0) {
+          reject(new Error('Can\'t start storefront server.', VUE_STOREFRONT_LOG_FILE))
+        }
       }
 
       resolve(answers)
     })
+  }
+
+  /**
+   * Handles all tasks needed to make theme installation
+   */
+  async themeInstallation () {
+    // get theme tasks
+    const { installDeps, cloneTheme, configureTheme } = createThemeTasks(STOREFRONT_DIRECTORY.toString())
+
+    // put tasks in order
+    const tasks = [
+      cloneTheme,
+      installDeps,
+      configureTheme
+    ]
+
+    for (let { title, task, skip } of tasks) {
+      Message.info(title)
+
+      const skipAnswer = skip ? await skip(this.answers) : ''
+
+      if (skipAnswer) {
+        Message.warning(skipAnswer)
+      } else {
+        await task(this.answers)
+      }
+    }
   }
 }
 
@@ -524,7 +615,7 @@ class Manager extends Abstract {
       Message.info('Trying to create log files...')
 
       try {
-        mkdirp.sync(LOG_DIR, {mode: parseInt('0755', 8)})
+        mkdirp.sync(LOG_DIR, { mode: parseInt('0755', 8) })
 
         let logFiles = [
           INSTALL_LOG_FILE,
@@ -562,7 +653,7 @@ class Manager extends Abstract {
         return this.backend.validateM2Integration()
           .then(this.backend.cloneRepository.bind(this.backend))
           .then(this.backend.goToDirectory.bind(this.backend))
-          .then(this.backend.npmInstall.bind(this.backend))
+          .then(this.backend.depInstall.bind(this.backend))
           .then(this.backend.createConfig.bind(this.backend))
           .then(this.backend.dockerComposeUp.bind(this.backend))
           .then(this.backend.importElasticSearch.bind(this.backend))
@@ -570,7 +661,7 @@ class Manager extends Abstract {
       } else {
         return this.backend.cloneRepository()
           .then(this.backend.goToDirectory.bind(this.backend))
-          .then(this.backend.npmInstall.bind(this.backend))
+          .then(this.backend.depInstall.bind(this.backend))
           .then(this.backend.createConfig.bind(this.backend))
           .then(this.backend.dockerComposeUp.bind(this.backend))
           .then(this.backend.restoreElasticSearch.bind(this.backend))
@@ -591,21 +682,9 @@ class Manager extends Abstract {
   initStorefront () {
     return this.storefront.goToDirectory()
       .then(this.storefront.createConfig.bind(this.storefront))
-      .then(this.storefront.npmBuild.bind(this.storefront))
+      .then(this.storefront.themeInstallation.bind(this.storefront))
+      .then(this.storefront.depBuild.bind(this.storefront))
       .then(this.storefront.runDevEnvironment.bind(this.storefront))
-  }
-
-  /**
-   * Check user OS and shows error if not supported
-   */
-  static checkUserOS () {
-    if (isWindows()) {
-      Message.error([
-        'Unfortunately currently only Linux and OSX are supported.',
-        'To install vue-storefront on your mac please go threw manual installation process provided in documentation:',
-        `${STOREFRONT_GIT_URL}/blob/master/doc/Installing%20on%20Windows.md`
-      ])
-    }
   }
 
   /**
@@ -682,7 +761,7 @@ let questions = [
     },
     validate: function (value) {
       try {
-        mkdirp.sync(value, {mode: parseInt('0755', 8)})
+        mkdirp.sync(value, { mode: parseInt('0755', 8) })
 
         if (!isEmptyDir.sync(value)) {
           return 'Please provide path to empty directory.'
@@ -735,7 +814,7 @@ let questions = [
   {
     type: 'input',
     name: 'm2_url',
-    message: 'Please provide your magento url',
+    message: 'Please provide your Magento url',
     default: 'http://demo-magento2.vuestorefront.io',
     when: function (answers) {
       return answers.is_remote_backend === false
@@ -753,7 +832,7 @@ let questions = [
   {
     type: 'input',
     name: 'm2_api_url',
-    message: 'Please provide the url to your magento rest api',
+    message: 'Please provide the URL to your Magento rest API',
     default: 'http://demo-magento2.vuestorefront.io/rest',
     when: function (answers) {
       return answers.m2_api_oauth2 === true
@@ -807,7 +886,14 @@ let questions = [
     when: function (answers) {
       return answers.m2_api_oauth2 === true
     }
-  }
+  },
+  {
+    type: 'confirm',
+    name: 'ssr_endpoints',
+    message: `Would You like to create fields for SSR endpoints?`,
+    default: false
+  },
+  ...createThemePrompt(STOREFRONT_DIRECTORY.toString())
 ]
 
 async function processAnswers (answers) {
@@ -832,11 +918,6 @@ Abstract.storefrontLogStream = '/dev/null'
 Abstract.backendLogStream = '/dev/null'
 
 if (require.main.filename === __filename) {
-  /**
-   * Pre-loading staff
-   */
-  Manager.checkUserOS()
-
   /**
    * This is where all the magic happens
    */

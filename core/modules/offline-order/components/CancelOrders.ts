@@ -1,24 +1,17 @@
-import * as localForage from 'localforage'
-import store from '@vue-storefront/store'
-
-import UniversalStorage from '@vue-storefront/store/lib/storage'
+import { Logger } from '@vue-storefront/core/lib/logger'
+import { StorageManager } from '@vue-storefront/core/lib/storage-manager'
 
 export const CancelOrders = {
   methods: {
     cancelOrders () {
-      const ordersCollection = new UniversalStorage(localForage.createInstance({
-        name: 'shop',
-        storeName: 'orders',
-        driver: localForage[store.state.config.localForage.defaultDrivers['orders']]
-      }))
-
+      const ordersCollection = StorageManager.get('orders')
       ordersCollection.iterate((order, id, iterationNumber) => {
         if (!order.transmited) {
           ordersCollection.removeItem(id)
         }
       }).catch(err => {
-        console.error(err)
-        console.log('Not transmitted orders have been deleted')
+        Logger.error(err, 'offline-order')()
+        Logger.log('Not transmitted orders have been deleted', 'offline-order')()
       })
     }
   }

@@ -1,6 +1,7 @@
 ---
 name: Feature request
 about: Suggest an idea for this project
+labels: feature request
 
 ---
 
@@ -10,13 +11,19 @@ about: Suggest an idea for this project
 
 ## What are the acceptance criteria 
 <!-- List the acceptance criteria for this task in a form of a list. -->
-- ...
-- ...
 
-# Can you complete this feature request by yourself?
-<!-- 
-If you can handle the development of this feature request and later propose a Pull Request with the solution please answer YES. otherwise answer NO.
--->
+- [ ] ...
+
+## Version of Vue Storefront
+<!-- Is it next or current VSF -->
+- [ ] Vue Storefront
+- [ ] Vue Storefront Next
+
+## Can you complete this feature request by yourself?
+
+- [ ] YES
+- [ ] NO
 
 ## Additional information
 <!-- If you think that any additional information would be useful please provide them here. -->
+

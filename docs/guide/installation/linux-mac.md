@@ -10,7 +10,7 @@ Let's go!
 
   Already included in `vue-storefront` and `vue-storefront-api` Docker images (required locally, if you do not use containerization):
 
-- Node.js [Active LTS](https://nodejs.org/en/) (>=8.0.0)
+- Node.js [Active LTS](https://nodejs.org/en/) (>=10.x)
 - [Yarn](https://yarnpkg.com/en/docs/install) (>=1.0.0)
 - [ImageMagick](https://www.imagemagick.org/script/index.php) (to fit, resize and crop images)
 
@@ -42,6 +42,20 @@ In this case you don't need to run Docker and you will be asked one additional q
 ```
 
 You can simply proceed and as a result you will have a `vue-storefront` folder inside your project root and Storefront application running on `http://localhost:3000`. All images will be also hosted at `https://demo.vuestorefront.io/img/`.
+
+### Theme
+
+You will get question about official theme installation and its version.
+```
+? Select theme for Vue Storefront (Use arrow keys)
+❯ Capybara - based on Storefront UI 
+  Default
+```
+```
+? Select theme version (Use arrow keys)
+❯ Stable version (recommended for production) 
+  In development branch (could be unstable!) 
+```
 
 ### Installing the vue-storefront-api locally
 
@@ -76,7 +90,7 @@ After you answered all the questions, the installation process will start (it mi
 
 Your project should contain 2 folders at this moment: `vue-storefront` and `vue-storefront-api`. Vue Storefront should be running on `http://localhost:3000`:
 
-![Storefront screenshot](/vue-storefront/storefront.png)
+![Storefront screenshot](../images/storefront.png)
 
 ## Manual installation
 
@@ -128,7 +142,7 @@ nano config/local.json
 The config file is quite simple, but here you have some comments: [Config file for vue-storefront](https://github.com/DivanteLtd/vue-storefront/wiki/Config-file-format-for-vue-storefront).
 
 :::tip NOTE
-We're using powerful node.js library for config files, check the docs to learn more on it: [https://github.com/lorenwest/node-config](https://github.com/lorenwest/node-config).
+We're using the powerful node.js library for config files, check the docs to learn more on it: [https://github.com/lorenwest/node-config](https://github.com/lorenwest/node-config).
 :::
 
 To import these products we'll use `elasticdump` - which is provided by default with `package.json` dependencies and yarn command. Then, we need to update the structures in the database to the latest version (data migrations).
@@ -142,8 +156,8 @@ Depending on the selected mode, execute the following commands:
   ```
 - **standard** mode:
   ```bash
-  docker exec -it vuestorefrontapi_app_1 yarn restore
-  docker exec -it vuestorefrontapi_app_1 yarn migrate
+  docker exec -it vue-storefront-api_app_1 yarn restore
+  docker exec -it vue-storefront-api_app_1 yarn migrate
   ```
 
 Clone the image files for default product database (we're using [Magento2 example products dataset](https://github.com/magento/magento2-sample-data). Please execute the following command in **the root folder of vue-storefront-api project**:
@@ -152,7 +166,7 @@ Clone the image files for default product database (we're using [Magento2 exampl
 git clone https://github.com/magento/magento2-sample-data.git var/magento2-sample-data
 ```
 
-If you choose to use **standard** mode, the application is already running in the background. However, if you decided to stay with the **legacy** mode, you must start the application manually using following command (development mode with dynamic file reloads when changed):
+If you choose to use **standard** mode, the application is already running in the background. However, if you decided to stay with the **legacy** mode, you must start the application manually using the following command (development mode with dynamic file reloads when changed):
 
 ```bash
 yarn dev
@@ -185,6 +199,8 @@ nano config/local.json
 ```
 
 The default config file should work perfectly fine for default purposes.
+
+Next [install theme](theme.md)
 
 Finally, you have to choose between two modes of running the application (similarly as in the case of vue-storefront-api).
 

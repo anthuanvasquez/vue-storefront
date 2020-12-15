@@ -1,37 +1,38 @@
 import { mapGetters } from 'vuex'
+import config from 'config'
 
-import store from '@vue-storefront/store'
 import EventBus from '@vue-storefront/core/compatibility/plugins/event-bus'
-import { htmlDecode, stripHTML } from '@vue-storefront/core/filters'
-import { currentStoreView, localizedRoute } from '@vue-storefront/store/lib/multistore'
+import { htmlDecode } from '@vue-storefront/core/filters'
+import { currentStoreView, localizedRoute } from '@vue-storefront/core/lib/multistore'
 import { CompareProduct } from '@vue-storefront/core/modules/compare/components/Product.ts'
 import { AddToCompare } from '@vue-storefront/core/modules/compare/components/AddToCompare.ts'
-import { isOptionAvailableAsync } from '@vue-storefront/core/modules/catalog/helpers/index'
+import { ProductOption } from '@vue-storefront/core/modules/catalog/components/ProductOption.ts'
 import omit from 'lodash-es/omit'
-
 import Composite from '@vue-storefront/core/mixins/composite'
+import { Logger } from '@vue-storefront/core/lib/logger'
+import { formatProductLink } from '@vue-storefront/core/modules/url/helpers'
 
 export default {
   name: 'Product',
-  mixins: [Composite, AddToCompare, CompareProduct],
+  mixins: [Composite, AddToCompare, CompareProduct, ProductOption],
   data () {
     return {
-      unavailableOptionsCount: 0,
       loading: false
     }
   },
   computed: {
     ...mapGetters({
-      product: 'product/productCurrent',
-      originalProduct: 'product/productOriginal',
-      parentProduct: 'product/productParent',
-      attributesByCode: 'attribute/attributeListByCode',
-      attributesById: 'attribute/attributeListById',
-      breadcrumbs: 'product/breadcrumbs',
-      configuration: 'product/currentConfiguration',
-      options: 'product/currentOptions',
-      category: 'category/current',
-      gallery: 'product/productGallery'
+      product: 'product/getCurrentProduct',
+      originalProduct: 'product/getOriginalProduct',
+      parentProduct: 'product/getParentProduct',
+      attributesByCode: 'attribute/getAttributeListByCode',
+      attributesById: 'attribute/getAttributeListById',
+      breadcrumbs: 'category-next/getBreadcrumbs',
+      configuration: 'product/getCurrentProductConfiguration',
+      options: 'product/getCurrentProductOptions',
+      category: 'category/getCurrentCategory',
+      gallery: 'product/getProductGallery',
+      isUserGroupedTaxActive: 'tax/getIsUserGroupedTaxActive'
     }),
     productName () {
       return this.product ? this.product.name : ''
@@ -41,9 +42,9 @@ export default {
     },
     offlineImage () {
       return {
-        src: this.getThumbnail(this.product.image, 310, 300),
-        error: this.getThumbnail(this.product.image, 310, 300),
-        loading: this.getThumbnail(this.product.image, 310, 300)
+        src: this.getThumbnail(this.product.image, config.products.thumbnails.width, config.products.thumbnails.height),
+        error: this.getThumbnail(this.product.image, config.products.thumbnails.width, config.products.thumbnails.height),
+        loading: this.getThumbnail(this.product.image, config.products.thumbnails.width, config.products.thumbnails.height)
       }
     },
     image () {
@@ -51,11 +52,8 @@ export default {
     },
     customAttributes () {
       return Object.values(this.attributesByCode).filter(a => {
-        return a.is_visible && a.is_user_defined && parseInt(a.is_visible_on_front) && this.product[a.attribute_code]
+        return a.is_visible && a.is_user_defined && (parseInt(a.is_visible_on_front) || a.is_visible_on_front === true) && this.product[a.attribute_code]
       })
-    },
-    isOnWishlist () {
-      return !!this.$store.state.wishlist.items.find(p => p.sku === this.product.sku)
     },
     currentStore () {
       return currentStoreView()
@@ -64,29 +62,31 @@ export default {
   asyncData ({ store, route, context }) { // this is for SSR purposes to prefetch data
     EventBus.$emit('product-before-load', { store: store, route: route })
     if (context) context.output.cacheTags.add(`product`)
-    return store.dispatch('product/fetchAsync', { parentSku: route.params.parentSku, childSku: route && route.params && route.params.childSku ? route.params.childSku : null })
+    return store.dispatch('product/loadProduct', { parentSku: route.params.parentSku, childSku: route && route.params && route.params.childSku ? route.params.childSku : null })
   },
-  watch: {
-    '$route.params.parentSku': 'validateRoute'
+  beforeRouteUpdate (to, from, next) {
+    this.validateRoute(to) // TODO: remove because client-entry.ts is executing `asyncData` anyway
+    next()
   },
+  // Move busses to mixin which is directly imported in Project.vue
   beforeDestroy () {
     this.$bus.$off('product-after-removevariant')
     this.$bus.$off('filter-changed-product')
     this.$bus.$off('product-after-priceupdate', this.onAfterPriceUpdate)
     this.$bus.$off('product-after-customoptions')
     this.$bus.$off('product-after-bundleoptions')
-    if (store.state.usePriceTiers) {
+    if (config.usePriceTiers || this.isUserGroupedTaxActive) {
       this.$bus.$off('user-after-loggedin', this.onUserPricesRefreshed)
       this.$bus.$off('user-after-logout', this.onUserPricesRefreshed)
     }
   },
   beforeMount () {
-    this.$bus.$on('product-after-removevariant', this.onAfterRemovedVariant)
-    this.$bus.$on('product-after-priceupdate', this.onAfterPriceUpdate)
-    this.$bus.$on('filter-changed-product', this.onAfterFilterChanged)
-    this.$bus.$on('product-after-customoptions', this.onAfterCustomOptionsChanged)
-    this.$bus.$on('product-after-bundleoptions', this.onAfterBundleOptionsChanged)
-    if (store.state.config.usePriceTiers) {
+    this.$bus.$on('product-after-removevariant', this.onAfterVariantChanged)
+    this.$bus.$on('product-after-priceupdate', this.onAfterPriceUpdate) // moved to catalog module
+    this.$bus.$on('filter-changed-product', this.onAfterFilterChanged) // moved to catalog module
+    this.$bus.$on('product-after-customoptions', this.onAfterCustomOptionsChanged) // moved to catalog module
+    this.$bus.$on('product-after-bundleoptions', this.onAfterBundleOptionsChanged) // moved to catalog module
+    if (config.usePriceTiers || this.isUserGroupedTaxActive) { // moved to catalog module
       this.$bus.$on('user-after-loggedin', this.onUserPricesRefreshed)
       this.$bus.$on('user-after-logout', this.onUserPricesRefreshed)
     }
@@ -94,22 +94,22 @@ export default {
     this.$store.dispatch('recently-viewed/addItem', this.product)
   },
   methods: {
-    validateRoute () {
+    validateRoute (route = this.$route) {
       if (!this.loading) {
         this.loading = true
-        this.$store.dispatch('product/fetchAsync', { parentSku: this.$route.params.parentSku, childSku: this.$route && this.$route.params && this.$route.params.childSku ? this.$route.params.childSku : null }).then(res => {
+        this.$store.dispatch('product/loadProduct', { parentSku: route.params.parentSku, childSku: route && route.params && route.params.childSku ? route.params.childSku : null }).then(res => {
           this.loading = false
           this.defaultOfflineImage = this.product.image
           this.onStateCheck()
           this.$store.dispatch('recently-viewed/addItem', this.product)
         }).catch((err) => {
           this.loading = false
-          console.error(err)
+          Logger.error(err)()
           this.notifyOutStock()
           this.$router.back()
         })
       } else {
-        console.error('Error with loading = true in Product.vue; Reload page')
+        Logger.error('Error with loading = true in Product.vue; Reload page')()
       }
     },
     addToWishlist (product) {
@@ -126,11 +126,6 @@ export default {
       // Method renamed to 'removeFromCompare(product)', product is an Object
       CompareProduct.methods.removeFromCompare.call(this, this.product)
     },
-    isOptionAvailable (option) { // check if the option is available
-      let currentConfig = Object.assign({}, this.configuration)
-      currentConfig[option.attribute_code] = option
-      return isOptionAvailableAsync(this.$store, { product: this.product, configuration: currentConfig })
-    },
     onAfterCustomOptionsChanged (payload) {
       let priceDelta = 0
       let priceDeltaInclTax = 0
@@ -142,12 +137,12 @@ export default {
           }
           if (optionValue.price_type === 'percent' && optionValue.price !== 0) {
             priceDelta += ((optionValue.price / 100) * this.originalProduct.price)
-            priceDeltaInclTax += ((optionValue.price / 100) * this.originalProduct.priceInclTax)
+            priceDeltaInclTax += ((optionValue.price / 100) * this.originalProduct.price_incl_tax)
           }
         }
       }
       this.product.price = this.originalProduct.price + priceDelta
-      this.product.priceInclTax = this.originalProduct.priceInclTax + priceDeltaInclTax
+      this.product.price_incl_tax = this.originalProduct.price_incl_tax + priceDeltaInclTax
     },
     onAfterBundleOptionsChanged (payload) {
       let priceDelta = 0
@@ -155,47 +150,49 @@ export default {
       for (const optionValue of Object.values(payload.optionValues)) {
         if (typeof optionValue.value.product !== 'undefined' && parseInt(optionValue.qty) >= 0) {
           priceDelta += optionValue.value.product.price * parseInt(optionValue.qty)
-          priceDeltaInclTax += optionValue.value.product.priceInclTax * parseInt(optionValue.qty)
+          priceDeltaInclTax += optionValue.value.product.price_incl_tax * parseInt(optionValue.qty)
         }
       }
       if (priceDelta > 0) {
         this.product.price = priceDelta
-        this.product.priceInclTax = priceDeltaInclTax
+        this.product.price_incl_tax = priceDeltaInclTax
       }
     },
     onStateCheck () {
       if (this.parentProduct && this.parentProduct.id !== this.product.id) {
-        console.log('Redirecting to parent, configurable product', this.parentProduct.sku)
-        this.$router.push({ name: 'product', params: { parentSku: this.parentProduct.sku, childSku: this.product.sku, slug: this.parentProduct.slug } })
+        Logger.log('Redirecting to parent, configurable product', this.parentProduct.sku)()
+        const parentUrl = formatProductLink(this.parentProduct, currentStoreView().storeCode)
+        this.$router.replace(parentUrl)
       }
     },
     onAfterPriceUpdate (product) {
       if (product.sku === this.product.sku) {
         // join selected variant object to the store
         this.$store.dispatch('product/setCurrent', omit(product, ['name']))
-          .catch(err => console.error({
+          .catch(err => Logger.error({
             info: 'Dispatch product/setCurrent in Product.vue',
             err
           }))
       }
     },
-    onAfterRemovedVariant (payload) {
+    onAfterVariantChanged (payload) {
+      this.$store.dispatch('product/setProductGallery', { product: this.product })
       this.$forceUpdate()
     },
     onAfterFilterChanged (filterOption) {
-      EventBus.$emit('product-before-configure', { filterOption: filterOption, configuration: this.configuration })
+      this.$bus.$emit('product-before-configure', { filterOption: filterOption, configuration: this.configuration })
       const prevOption = this.configuration[filterOption.attribute_code]
-      this.configuration[filterOption.attribute_code] = filterOption
+      let changedConfig = Object.assign({}, this.configuration, { [filterOption.attribute_code]: filterOption })
       this.$forceUpdate() // this is to update the available options regarding current selection
       this.$store.dispatch('product/configure', {
         product: this.product,
-        configuration: this.configuration,
+        configuration: changedConfig,
         selectDefaultVariant: true,
         fallbackToDefaultWhenNoAvailable: false,
         setProductErorrs: true
       }).then((selectedVariant) => {
-        if (store.state.config.products.setFirstVarianAsDefaultInURL) {
-          this.$router.push({params: { childSku: selectedVariant.sku }})
+        if (config.products.setFirstVarianAsDefaultInURL) {
+          this.$router.push({ params: { childSku: selectedVariant.sku } })
         }
         if (!selectedVariant) {
           if (typeof prevOption !== 'undefined' && prevOption) {
@@ -205,7 +202,7 @@ export default {
           }
           this.notifyWrongAttributes()
         }
-      }).catch(err => console.error({
+      }).catch(err => Logger.error({
         info: 'Dispatch product/configure in Product.vue',
         err
       }))
@@ -216,7 +213,7 @@ export default {
     onUserPricesRefreshed () {
       if (this.$route.params.parentSku) {
         this.$store.dispatch('product/reset')
-        EventBus.$emit('product-before-load', { store: this.$store, route: this.$route })
+        this.$bus.$emit('product-before-load', { store: this.$store, route: this.$route })
         this.$store.dispatch('product/single', {
           options: {
             sku: this.$route.params.parentSku,
@@ -230,8 +227,7 @@ export default {
   metaInfo () {
     const storeView = currentStoreView()
     return {
-      title: htmlDecode(this.$route.meta.title || this.productName),
-      link: [
+      /* link: [
         { rel: 'amphtml',
           href: this.$router.resolve(localizedRoute({
             name: this.product.type_id + '-product-amp',
@@ -242,8 +238,9 @@ export default {
             }
           }, storeView.storeCode)).href
         }
-      ],
-      meta: [{ vmid: 'description', description: this.product.short_description ? stripHTML(htmlDecode(this.product.short_description)) : htmlDecode(stripHTML(this.product.description)) }]
+      ], */
+      title: htmlDecode(this.product.meta_title || this.productName),
+      meta: this.product.meta_description ? [{ vmid: 'description', name: 'description', content: htmlDecode(this.product.meta_description) }] : []
     }
   }
 }

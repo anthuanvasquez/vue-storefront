@@ -1,27 +1,27 @@
-import SearchQuery from '@vue-storefront/store/lib/search/searchQuery'
-import store from '@vue-storefront/store'
+import { SearchQuery } from 'storefront-query-builder'
+import config from 'config'
 
-export function prepareQuery ({queryText = '', filters = [], queryConfig = ''}) {
+export function prepareQuery ({ queryText = '', filters = [], queryConfig = '' }) {
   let query = new SearchQuery()
   // prepare filters and searchText
   if (filters.length === 0 && queryConfig !== '') {
     // try get filters from config
-    if (store.state.config.hasOwnProperty('query') && store.state.config.query.hasOwnProperty(queryConfig) && store.state.config.query[queryConfig].hasOwnProperty('filter')) {
-      filters = store.state.config.query[queryConfig].filter
+    if (config.hasOwnProperty('query') && config.query.hasOwnProperty(queryConfig) && config.query[queryConfig].hasOwnProperty('filter')) {
+      filters = config.query[queryConfig].filter
     }
   }
 
   if (queryText === '') {
     // try to get searchText from config
-    if (store.state.config.hasOwnProperty('query') && store.state.config.query.hasOwnProperty(queryConfig) && store.state.config.query[queryConfig].hasOwnProperty('searchText')) {
-      queryText = store.state.config.query[queryConfig].searchText
+    if (config.hasOwnProperty('query') && config.query.hasOwnProperty(queryConfig) && config.query[queryConfig].hasOwnProperty('searchText')) {
+      queryText = config.query[queryConfig].searchText
     }
   }
 
   // Process filters and searchText if exists
   if (filters.length > 0) {
     filters.forEach(filter => {
-      query = query.applyFilter({key: filter.key, value: filter.value}) // Tees category
+      query = query.applyFilter({ key: filter.key, value: filter.value }) // Tees category
     })
   }
 
@@ -31,8 +31,8 @@ export function prepareQuery ({queryText = '', filters = [], queryConfig = ''}) 
 
   // Add basic filters
   query = query
-    .applyFilter({key: 'visibility', value: {'in': [2, 3, 4]}})
-    .applyFilter({key: 'status', value: {'in': [0, 1]}})
+    .applyFilter({ key: 'visibility', value: { 'in': [2, 3, 4] } })
+    .applyFilter({ key: 'status', value: { 'in': [0, 1] } })
 
   return query
 }

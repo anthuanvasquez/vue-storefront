@@ -2,7 +2,8 @@ import { mapState } from 'vuex'
 import i18n from '@vue-storefront/i18n'
 import onEscapePress from '@vue-storefront/core/mixins/onEscapePress'
 import { prepareQuickSearchQuery } from '@vue-storefront/core/modules/catalog/queries/searchPanel'
-import RootState from '@vue-storefront/store/types/RootState'
+import RootState from '@vue-storefront/core/types/RootState'
+import { Logger } from '@vue-storefront/core/lib/logger'
 
 export const Search = {
   name: 'SearchPanel',
@@ -14,8 +15,19 @@ export const Search = {
       start: 0,
       placeholder: i18n.t('Type what you are looking for...'),
       emptyResults: false,
-      readMore: true
+      readMore: true,
+      componentLoaded: false
     }
+  },
+  mounted () {
+    this.search = localStorage.getItem(`shop/user/searchQuery`) || ''
+
+    if (this.search) {
+      this.makeSearch();
+    }
+  },
+  beforeDestroy () {
+    localStorage.setItem(`shop/user/searchQuery`, this.search ? this.search : '');
   },
   methods: {
     onEscapePress () {
@@ -30,38 +42,58 @@ export const Search = {
       let searchQuery = prepareQuickSearchQuery(queryText)
       return searchQuery
     },
-    makeSearch () {
+    async makeSearch () {
       if (this.search !== '' && this.search !== undefined) {
         let query = this.buildSearchQuery(this.search)
-        this.start = 0
+        let startValue = 0;
+        this.start = startValue
         this.readMore = true
-        this.$store.dispatch('product/list', { query, start: this.start, size: this.size, updateState: false }).then(resp => {
-          this.products = resp.items
-          this.start = this.start + this.size
-          this.emptyResults = resp.items.length < 1
-        }).catch((err) => {
-          console.error(err)
-        })
+        try {
+          const { items } = await this.$store.dispatch('product/findProducts', {
+            query,
+            start: this.start,
+            size: this.size,
+            options: {
+              populateRequestCacheTags: false,
+              prefetchGroupProducts: false
+            }
+          })
+          this.products = items
+          this.start = startValue + this.size
+          this.emptyResults = items.length < 1
+        } catch (err) {
+          Logger.error(err, 'components-search')()
+        }
       } else {
         this.products = []
         this.emptyResults = 0
       }
     },
-    seeMore () {
+    async seeMore () {
       if (this.search !== '' && this.search !== undefined) {
         let query = this.buildSearchQuery(this.search)
-        this.$store.dispatch('product/list', { query, start: this.start, size: this.size, updateState: false }).then((resp) => {
-          let page = Math.floor(resp.total / this.size)
-          let exceeed = resp.total - this.size * page
-          if (resp.start === resp.total - exceeed) {
+        let startValue = this.start;
+        try {
+          const { items, total, start } = await this.$store.dispatch('product/findProducts', {
+            query,
+            start: startValue,
+            size: this.size,
+            options: {
+              populateRequestCacheTags: false,
+              prefetchGroupProducts: false
+            }
+          })
+          let page = Math.floor(total / this.size)
+          let exceeed = total - this.size * page
+          if (start === total - exceeed) {
             this.readMore = false
           }
-          this.products = this.products.concat(resp.items)
-          this.start = this.start + this.size
+          this.products = this.products.concat(items)
+          this.start = startValue + this.size
           this.emptyResults = this.products.length < 1
-        }).catch((err) => {
-          console.error(err)
-        })
+        } catch (err) {
+          Logger.error(err, 'components-search')()
+        }
       } else {
         this.products = []
         this.emptyResults = 0
